@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>手机小游戏 - 点击飞鸟</title>
+    <style>
+        body { margin: 0; padding: 0; background: #4ec0ca; text-align: center; }
+        canvas { background: #4ec0ca; display: block; margin: 0 auto; border: 2px solid #333; }
+        #gameOver { display: none; margin-top: 20px; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="300" height="500"></canvas>
+    <div id="gameOver">
+        <p>游戏结束！点击屏幕重新开始</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameOverDiv = document.getElementById('gameOver');
+
+        // 游戏变量
+        let bird = { x: 50, y: 200, radius: 12 };
+        let pipes = [];
+        let frame = 0;
+        let score = 0;
+        let gameRunning = true;
+        let gravity = 0.5;
+        let velocity = 0;
+
+        // 监听点击（触摸）事件
+        canvas.addEventListener('click', function() {
+            if (gameRunning) {
+                velocity = -8; // 向上飞
+            } else {
+                restartGame();
+            }
+        });
+
+        function restartGame() {
+            bird.y = 200;
+            pipes = [];
+            frame = 0;
+            score = 0;
+            velocity = 0;
+            gameRunning = true;
+            gameOverDiv.style.display = 'none';
+            updateGame();
+        }
+
+        function drawBird() {
+            ctx.fillStyle = '#ff0';
+            ctx.beginPath();
+            ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawPipes() {
+            ctx.fillStyle = '#0a0';
+            for (let p of pipes) {
+                ctx.fillRect(p.x, 0, p.width, p.top);
+                ctx.fillRect(p.x, canvas.height - p.bottom, p.width, p.bottom);
+            }
+        }
+
+        function updateGame() {
+            if (!gameRunning) return;
+
+            // 物理效果
+            velocity += gravity;
+            bird.y += velocity;
+
+            // 边界碰撞
+            if (bird.y - bird.radius < 0 || bird.y + bird.radius > canvas.height) {
+                gameRunning = false;
+                gameOverDiv.style.display = 'block';
+                return;
+            }
+
+            // 生成管道
+            if (frame % 80 === 0) {
+                let gap = 120;
+                let topHeight = Math.random() * (canvas.height - gap - 50) + 20;
+                pipes.push({
+                    x: canvas.width,
+                    width: 40,
+                    top: topHeight,
+                    bottom: canvas.height - topHeight - gap
+                });
+            }
+
+            // 移动管道
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                pipes[i].x -= 3;
+
+                // 碰撞检测
+                if (bird.x + bird.radius > pipes[i].x && bird.x - bird.radius < pipes[i].x + pipes[i].width) {
+                    if (bird.y - bird.radius < pipes[i].top || bird.y + bird.radius > canvas.height - pipes[i].bottom) {
+                        gameRunning = false;
+                        gameOverDiv.style.display = 'block';
+                        return;
+                    }
+                }
+
+                // 计分
+                if (pipes[i].x + pipes[i].width < bird.x && !pipes[i].scored) {
+                    score++;
+                    pipes[i].scored = true;
+                }
+
+                // 移除出界的管道
+                if (pipes[i].x + pipes[i].width < 0) {
+                    pipes.splice(i, 1);
+                }
+            }
+
+            frame++;
+
+            // 画图
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPipes();
+            drawBird();
+            
+            // 显示分数
+            ctx.fillStyle = '#fff';
+            ctx.font = '20px Arial';
+            ctx.fillText('分数: ' + score, 10, 30);
+
+            requestAnimationFrame(updateGame);
+        }
+
+        // 启动游戏
+        updateGame();
+    </script>
+</body>
+</html>
